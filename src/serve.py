@@ -1,13 +1,14 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from google.cloud import storage
+import boto3
 import joblib
 import os
 
 app = FastAPI()
 
-GCS_BUCKET = os.environ["GCS_BUCKET"]
-GCS_MODEL_KEY = "models/latest/model.pkl"
+S3_BUCKET = os.environ["S3_BUCKET"]
+S3_MODEL_KEY = "models/latest/model.pkl"
 MODEL_PATH = os.path.expanduser("~/models/model.pkl")
 
 
@@ -20,6 +21,7 @@ def download_model():
     """
     # TODO 1: Tao storage.Client()
     # client = storage.Client()
+    s3 = boto3.client("s3")
 
     # TODO 2: Lay bucket va blob tuong ung
     # bucket = client.bucket(GCS_BUCKET)
@@ -27,11 +29,13 @@ def download_model():
 
     # TODO 3: Tai file model xuong may
     # blob.download_to_filename(MODEL_PATH)
+    s3.download_file(S3_BUCKET, S3_MODEL_KEY, MODEL_PATH)
 
     # TODO 4: In thong bao thanh cong
     # print("Model da duoc tai xuong tu GCS.")
+    print(f"Model downloaded to {MODEL_PATH}")
 
-    pass  # xoa dong nay sau khi hoan thanh tat ca TODO ben tren
+    # pass  # xoa dong nay sau khi hoan thanh tat ca TODO ben tren
 
 
 download_model()
@@ -51,7 +55,8 @@ def health():
     Tra ve: {"status": "ok"}
     """
     # TODO 5: Tra ve dict {"status": "ok"}
-    pass  # xoa dong nay sau khi hoan thanh
+    # pass  # xoa dong nay sau khi hoan thanh
+    return {"status": "ok"}
 
 
 @app.post("/predict")
@@ -69,15 +74,20 @@ def predict(req: PredictRequest):
     """
     # TODO 6: Kiem tra so luong dac trung.
     # Neu len(req.features) != 12, raise HTTPException(status_code=400, ...)
+    if len(req.features) != 12:
+        raise HTTPException(status_code=400, detail="Expected 12 features")
 
     # TODO 7: Goi model.predict([req.features]) de lay ket qua du doan.
     # pred = model.predict(...)
+    pred = int(model.predict([req.features])[0])
 
     # TODO 8: Tra ve dict chua "prediction" (int) va "label" (string).
     # Nhan tuong ung: 0 -> "thap", 1 -> "trung_binh", 2 -> "cao"
     # return {"prediction": ..., "label": ...}
+    labels = {0: "thấp", 1: "trung_bình", 2: "cao"}
+    return {"prediction": pred, "label": labels[pred]}
 
-    pass  # xoa dong nay sau khi hoan thanh tat ca TODO ben tren
+    # pass  # xoa dong nay sau khi hoan thanh tat ca TODO ben tren
 
 
 if __name__ == "__main__":
